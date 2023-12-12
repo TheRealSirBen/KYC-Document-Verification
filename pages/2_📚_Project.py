@@ -64,6 +64,26 @@ if 0 <= session_state.get('navigation_id') <= len(NAV_LIST):
 
 
 # Button callbacks
+def restart():
+    filter_details = {'session_id': session_state.get('session_id')}
+    # Get Application form data
+    application_form_details_list = get_model_details_by_filter(ApplicationForm, filter_details)
+    # Get Documents data
+    documents_details_list = get_model_details_by_filter(UploadedDocument, filter_details)
+
+    # Delete Application Form Records
+    for _form in application_form_details_list:
+        delete_model_record_by_id(ApplicationForm, _form.get('id'))
+
+    # Delete Uploaded Document Records
+    for _document in documents_details_list:
+        delete_model_record_by_id(UploadedDocument, _document.get('id'))
+
+    st.success('All data and documents provided cleared. Start afresh')
+
+    session_state['navigation_id'] = 0
+
+
 # # Application Form
 def application_form_button_clicked(form_data: dict):
     unavailable_fields = validate_form_data(form_data)
@@ -845,9 +865,9 @@ if session_state.get('navigation_id') == 5:
 
     col1, col2, col3 = st.columns(3)
     with col3:
-        st.button('Start afresh', use_container_width=True, type='primary')
+        st.button('Start afresh', use_container_width=True, type='primary', on_click=restart)
 
     #
-    st.write('### Proof of Identity')
-    st.markdown(""" - Item 1  """)
-    st.markdown(""" - Item 2  """)
+    st.write('### Proof of Identity ✅')
+    st.write('### Proof of Residency ✅')
+    st.write('### Proof of Income ✅')

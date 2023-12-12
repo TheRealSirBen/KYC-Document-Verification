@@ -16,9 +16,6 @@ from init import PREDICTIONS_FOLDER
 engine = create_connection()
 Session = sessionmaker(bind=engine)
 
-OD = YOLO('od_model.pt')
-OCR = PaddleOCR(use_angle_cls=True, lang='en')
-
 
 # Add record to database table
 def new_record(model: Base, record_data: dict):
@@ -63,11 +60,12 @@ def delete_model_record_by_id(model: Base, _id: int):
 
 # Run Object Detection model on image
 def run_object_detection_model(image_path: str, image_name: str) -> str:
+    od = YOLO('od_model.pt')
     # Out filename
     output_filepath = join(PREDICTIONS_FOLDER, 'od_{}'.format(image_name))
 
     # infer on a local image
-    results = OD(image_path)
+    results = od(image_path)
 
     # Show the results
     for r in results:
@@ -80,8 +78,9 @@ def run_object_detection_model(image_path: str, image_name: str) -> str:
 
 # Run Optical Character Recognition Model on image
 def run_optical_character_recognition_model(image_path: str, image_name: str):
+    ocr = PaddleOCR(use_angle_cls=True, lang='en')
     # Get predictions
-    result = OCR.ocr(image_path, cls=True)
+    result = ocr.ocr(image_path, cls=True)
 
     ocr_results = read_ocr_results(result)
     bounding_boxes = convert_coordinates(ocr_results['bbox'])
