@@ -1,9 +1,10 @@
 from os.path import join
 
+from PIL import Image
 from deepface import DeepFace
 from paddleocr import PaddleOCR
-from roboflow import Roboflow
 from sqlalchemy.orm import sessionmaker
+from ultralytics import YOLO
 
 from database import Base
 from database import create_connection
@@ -15,6 +16,7 @@ from init import PREDICTIONS_FOLDER
 engine = create_connection()
 Session = sessionmaker(bind=engine)
 
+OD = YOLO('od_model.pt')
 OCR = PaddleOCR(use_angle_cls=True, lang='en')
 
 
@@ -61,19 +63,17 @@ def delete_model_record_by_id(model: Base, _id: int):
 
 # Run Object Detection model on image
 def run_object_detection_model(image_path: str, image_name: str) -> str:
-    rf = Roboflow(api_key="GWORd1BPZAqzyeuR427r")
-    rf_project = rf.workspace().project("kycva")
-    model = rf_project.version(6).model
-
     # Out filename
     output_filepath = join(PREDICTIONS_FOLDER, 'od_{}'.format(image_name))
 
     # infer on a local image
-    inference = model.predict(image_path, confidence=40, overlap=30)
-    print(inference)
+    results = OD(image_path)
 
-    # visualize your prediction
-    inference.save(output_filepath)
+    # Show the results
+    for r in results:
+        im_array = r.plot()  # plot a BGR numpy array of predictions
+        im = Image.fromarray(im_array[..., ::-1])  # RGB PIL image
+        im.save(output_filepath)  # save image
 
     return output_filepath
 
@@ -136,4 +136,4 @@ def run_facial_recognition_similarity_model(image_1_details: dict, image_2_detai
 
 
 if __name__ == '__main__':
-    run_optical_character_recognition_model('top_half.png', 'econ.png')
+    run_object_detection_model('images/e16df190-48bf-48bc-8959-057fb9e3a318_poi_document.png', 'econ.png')
