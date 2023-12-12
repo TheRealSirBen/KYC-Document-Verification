@@ -31,7 +31,6 @@ def load_yolo_od_model():
 
 
 # Add record to database table
-@lru_cache()
 def new_record(model: Base, record_data: dict):
     # Start session
     session = Session()
@@ -46,7 +45,6 @@ def new_record(model: Base, record_data: dict):
 
 
 # Retrieve from database table
-@lru_cache()
 def get_model_details_by_filter(model: Base, filter_dict: dict) -> list:
     session = Session()
     model_query = session.query(model).filter_by(**filter_dict).all()
@@ -56,7 +54,6 @@ def get_model_details_by_filter(model: Base, filter_dict: dict) -> list:
 
 
 # Update record in database table
-@lru_cache()
 def update_model_record_by_session_id(model: Base, filter_dict: dict, update_data: dict):
     session = Session()
     model_query = session.query(model).filter_by(**filter_dict).first()
@@ -109,7 +106,6 @@ def run_optical_character_recognition_model(image_path: str, image_name: str):
     return result, ocr_output_file_path
 
 
-@lru_cache()
 def run_facial_recognition_similarity_model(image_1_details: dict, image_2_details: dict):
     # Get Model Parameters
     model_parameters = {

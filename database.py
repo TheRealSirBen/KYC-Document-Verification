@@ -1,6 +1,4 @@
 from sqlalchemy import Column
-from sqlalchemy import DATE
-from sqlalchemy import DATETIME
 from sqlalchemy import INTEGER
 from sqlalchemy import JSON
 from sqlalchemy import TEXT
@@ -16,9 +14,9 @@ class ApplicationForm(Base):
     names = Column(TEXT, nullable=False)
     surname = Column(TEXT, nullable=False)
     gender = Column(TEXT, nullable=False)
-    dob = Column(DATE, nullable=False)
+    dob = Column(TEXT, nullable=False)
     money_access = Column(TEXT, nullable=False)
-    created = Column(DATETIME, nullable=False)
+    created = Column(TEXT, nullable=False)
 
     def model_details(self):
         return {

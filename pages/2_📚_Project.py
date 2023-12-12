@@ -381,14 +381,15 @@ if session_state.get('navigation_id') == 0:
             ('Yes', 'No'),
             placeholder="Click dropdown arrow and choose an poi_document_type"
         )
+        created_time = datetime.now()
         application_data = {
             'session_id': session_state.get('session_id'),
             'names': name_s,
             'surname': surname,
             'gender': gender,
-            'dob': date_of_birth,
+            'dob': date_of_birth.strftime("%Y-%m-%d"),
             'money_access': money_access,
-            'created': datetime.now()
+            'created': created_time.strftime("%Y-%m-%d")
         }
         st.form_submit_button('Submit', on_click=application_form_button_clicked, args=(application_data,))
 
@@ -548,6 +549,7 @@ if session_state.get('navigation_id') == 2:
             }
 
             # Save information to database
+
             new_record(UploadedDocument, poi_recent_picture_details)
 
     col1, col2, col3 = st.columns(3)
