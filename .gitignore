@@ -2,6 +2,7 @@
 *.log
 
 # ignore ALL files in ANY directory named venv, .deta, .idea
+venv/
 images/
 pdfs/
 predictions/
