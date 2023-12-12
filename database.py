@@ -4,34 +4,8 @@ from sqlalchemy import DATETIME
 from sqlalchemy import INTEGER
 from sqlalchemy import JSON
 from sqlalchemy import TEXT
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
 
-# Create a base class for declarative models
-Base = declarative_base()
-
-
-def get_sql_alchemy_url():
-    return 'sqlite:///app_database.db'
-
-
-def initialize_database():
-    # Create the SQLAlchemy engine
-    engine = create_engine(get_sql_alchemy_url())
-
-    # create a connection object
-    conn = engine.connect()
-
-    # Create tables
-    Base.metadata.create_all(bind=engine)
-
-    # close the connection
-    conn.close()
-
-
-def create_connection():
-    sql_alchemy_url = get_sql_alchemy_url()
-    return create_engine(sql_alchemy_url)
+from init import Base
 
 
 # Define the ApplicationForm model
