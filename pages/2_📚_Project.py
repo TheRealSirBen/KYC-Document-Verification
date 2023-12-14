@@ -376,6 +376,7 @@ if session_state.get('navigation_id') == 0:
             max_value=date_18_years_ago,
             format='YYYY-MM-DD'
         )
+        address = st.text_area('Residential Address', placeholder="Type your the address of where you reside here ...")
         money_access = st.selectbox(
             'Do you have a bank account or mobile wallet',
             ('Yes', 'No'),
