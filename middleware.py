@@ -18,16 +18,16 @@ engine = create_connection()
 Session = sessionmaker(bind=engine)
 
 
-@lru_cache()
-def load_paddle_ocr_model():
-    ocr = PaddleOCR(use_angle_cls=True, lang='en')
-    return ocr
-
-
-@lru_cache()
-def load_yolo_od_model():
-    od = YOLO('od_model.pt')
-    return od
+# @lru_cache()
+# def load_paddle_ocr_model():
+#     ocr = PaddleOCR(use_angle_cls=True, lang='en')
+#     return ocr
+#
+#
+# @lru_cache()
+# def load_yolo_od_model():
+#     od = YOLO('od_model.pt')
+#     return od
 
 
 # Add record to database table
@@ -75,7 +75,7 @@ def delete_model_record_by_id(model: Base, _id: int):
 # Run Object Detection model on image
 @lru_cache()
 def run_object_detection_model(image_path: str, image_name: str) -> str:
-    od = load_yolo_od_model()
+    od = YOLO('deep-learning-models/od_model.pt')
     # Out filename
     output_filepath = join(PREDICTIONS_FOLDER, 'od_{}'.format(image_name))
 
@@ -94,7 +94,7 @@ def run_object_detection_model(image_path: str, image_name: str) -> str:
 # Run Optical Character Recognition Model on image
 @lru_cache()
 def run_optical_character_recognition_model(image_path: str, image_name: str):
-    ocr_model = load_paddle_ocr_model()
+    ocr_model = PaddleOCR(use_angle_cls=True, lang='en', rec_model_dir='deep-learning-models/ocr_model')
     # Get predictions
     result = ocr_model.ocr(image_path, cls=True)
 
@@ -106,6 +106,7 @@ def run_optical_character_recognition_model(image_path: str, image_name: str):
     return result, ocr_output_file_path
 
 
+# Run Facial Recognition model on images
 def run_facial_recognition_similarity_model(image_1_details: dict, image_2_details: dict):
     # Get Model Parameters
     model_parameters = {
