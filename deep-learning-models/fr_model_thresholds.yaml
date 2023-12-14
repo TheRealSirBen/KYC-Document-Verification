@@ -1,0 +1,15 @@
+# Hyper Parameters
+hyper_parameters:
+  model_name: 'VGG-Face'
+  detector_backend: 'ssd'
+  distance_metric: 'cosine'
+
+# Verification Threshold Acceptable Limits
+threshold:
+  male:
+    below_40: 0.35
+    at_least_40: 0.43
+  female:
+    below_40: 0.36
+    at_least_40: 0.45
+

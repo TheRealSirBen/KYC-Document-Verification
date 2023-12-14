@@ -6,6 +6,7 @@ from os.path import join
 from random import randint
 
 import fitz
+import yaml
 from PIL import Image
 from cv2 import imread
 from cv2 import imwrite
@@ -79,6 +80,9 @@ def write_dict_to_pickle(dictionary: dict, model_type: str, name: str) -> str:
     file.close()
 
     return file_path
+
+
+
 
 
 def read_pickle_file(file_path):

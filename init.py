@@ -45,9 +45,6 @@ makedirs(PDF_FOLDER, exist_ok=True)
 makedirs(IMAGE_FOLDER, exist_ok=True)
 makedirs(PREDICTIONS_FOLDER, exist_ok=True)
 
-# initialise database
-initialize_database()
-
 PAGE_HELP = """
 This is the Application form page, where you are required to provide the requested information.
 """
