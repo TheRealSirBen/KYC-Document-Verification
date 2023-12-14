@@ -7,22 +7,18 @@ WORKDIR /app
 # Copy the current directory contents into the container at /app
 COPY . /app
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl \
-    software-properties-common \
-    git \
+# Install system packages listed in packages.txt
+RUN apt-get update && apt-get install -y --no-install-recommends $(cat packages.txt) \
     && rm -rf /var/lib/apt/lists/*
 
 # Create Virtual Environment
-RUN pip install --upgrade pip
-RUN pip install virtualenv
-RUN virtualenv venv
+RUN python -m venv venv
 
 # Activate Virtual Environment
 RUN /bin/bash -c "source venv/bin/activate"
 
-# Install any needed packages specified in requirements.txt
+# Upgrade pip and install required Python packages
+RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 EXPOSE 8501
