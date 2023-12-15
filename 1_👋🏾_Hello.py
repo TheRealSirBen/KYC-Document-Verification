@@ -1,12 +1,5 @@
 import streamlit as st
 
-from init import initialize_database
-
-# initialise database
-if 'database ready' not in st.session_state:
-    initialize_database()
-    st.session_state['database ready'] = 1
-
 st.write("## :blue[CHINHOYI UNIVERSITY OF TECHNOLOGY]")
 
 col1, col2 = st.columns(2)

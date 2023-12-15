@@ -16,20 +16,6 @@ def create_connection():
     return create_engine(sql_alchemy_url)
 
 
-def initialize_database():
-    # Create the SQLAlchemy engine
-    engine = create_engine(get_sql_alchemy_url())
-
-    # create a connection object
-    conn = engine.connect()
-
-    # Create tables
-    Base.metadata.create_all(bind=engine)
-
-    # close the connection
-    conn.close()
-
-
 # Prepare folders
 IMAGE_FOLDER = 'images'
 PDF_FOLDER = 'pdfs'
