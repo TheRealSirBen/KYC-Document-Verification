@@ -17,9 +17,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Delete records from tables
-RUN sqlite3 app_database.db "DELETE FROM application_form; DELETE FROM uploaded_document;"
-
 # Create Virtual Environment
 RUN python -m venv venv
 
