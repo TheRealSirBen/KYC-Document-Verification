@@ -12,10 +12,6 @@ en_PP-OCRv3_rec_infer/
 # ignore ALL files in ANY directory named __pycache__
 **/__pycache__/
 
-# ignore ALL Database files in directory
-*.sqlite3
-*.db
-
 # ignore sparing file
 *sparing
 sparing.py
