@@ -1,9 +1,7 @@
-from functools import lru_cache
+from os import environ
 from os.path import join
 
-import yaml
 from PIL import Image
-from deepface import DeepFace
 from paddleocr import PaddleOCR
 from sqlalchemy.orm import sessionmaker
 from ultralytics import YOLO
@@ -11,41 +9,30 @@ from ultralytics import YOLO
 from helper import convert_coordinates
 from helper import draw_bounding_box_on_image
 from helper import read_ocr_results
+
+from datagrip import facial_recognition_model
+from datagrip import get_cloud_storage_files_by_session_id
+from datagrip import delete_file_from_cloud_storage
+
 from init import Base
 from init import PREDICTIONS_FOLDER
 from init import create_connection
+
+STORAGE_CONTAINER_NAME = environ.get('STORAGE_CONTAINER_NAME')
+PREDICTIONS_CONTAINER_NAME = environ.get('PREDICTIONS_CONTAINER_NAME')
 
 engine = create_connection()
 Session = sessionmaker(bind=engine)
 
 
-@lru_cache()
 def load_paddle_ocr_model():
     ocr = PaddleOCR(use_angle_cls=True, lang='en', rec_model_dir='deep-learning-models/ocr_model')
     return ocr
 
 
-@lru_cache()
 def load_yolo_od_model():
     od = YOLO('deep-learning-models/od_model.pt')
     return od
-
-
-@lru_cache()
-def load_deep_face_configurations():
-    # Read the YAML file
-    with open('deep-learning-models/fr_model_thresholds.yaml', 'r') as file:
-        yaml_data = yaml.safe_load(file)
-
-    # Create a dictionary from the YAML data
-    data_dict = dict(yaml_data)
-
-    # Access the values in the dictionary
-    hyper_parameters = data_dict['hyper_parameters']
-    threshold = data_dict['threshold']
-
-    # Print the dictionaries
-    return hyper_parameters, threshold
 
 
 # Add record to database table
@@ -82,7 +69,6 @@ def update_model_record_by_session_id(model: Base, filter_dict: dict, update_dat
         session.close()
 
 
-@lru_cache()
 def delete_model_record_by_id(model: Base, _id: int):
     session = Session()
     session.query(model).filter_by(id=_id).delete()
@@ -91,7 +77,6 @@ def delete_model_record_by_id(model: Base, _id: int):
 
 
 # Run Optical Character Recognition Model on image
-@lru_cache()
 def run_optical_character_recognition_model(image_path: str, image_name: str):
     # Get predictions
     ocr = load_paddle_ocr_model()
@@ -107,42 +92,37 @@ def run_optical_character_recognition_model(image_path: str, image_name: str):
 
 # Run Facial Recognition model on images
 def run_facial_recognition_similarity_model(image_1_details: dict, image_2_details: dict):
-    # Get Model Parameters
-    hyper_parameters, threshold = load_deep_face_configurations()
-
-    # Extract Image 1 data
+    # Extract Images data
     image_1_path, image_1_name = image_1_details.get('uploaded_poi_image_path'), image_1_details.get('name')
     image_2_path, image_2_name = image_2_details.get('uploaded_po_recent_image_path'), image_2_details.get('name')
 
-    # Image verification
+    fr_status, fr_response = facial_recognition_model(image_1_name, image_2_name)
 
-    verification_details = DeepFace.verify(
-        img1_path=image_1_path,
-        img2_path=image_2_path,
-        enforce_detection=False,
-        model_name=hyper_parameters['model_name'],
-        detector_backend=hyper_parameters['detector_backend']
-    )
-    # Get Inference Results
-    distance, facial_areas = verification_details.get('distance'), verification_details.get('facial_areas')
-    # Get facial results
-    image_1_facials, image_2_facials = facial_areas.get('img1'), facial_areas.get('img2')
-    # Draw bounding boxes on images
-    image_1_output_path = draw_bounding_box_on_image(image_1_path, image_1_name, [image_1_facials], 'fr')
-    image_2_output_path = draw_bounding_box_on_image(image_2_path, image_2_name, [image_2_facials], 'fr')
+    if fr_status == 200:
+        verification_details = fr_response.get('data')
 
-    result = {
-        'distance': distance,
-        'facial_areas_image_1': facial_areas.get('img1'),
-        'facial_areas_image_2': facial_areas.get('img2')
-    }
+        # Get Inference Results
+        distance = verification_details.get('distance')
 
-    return distance, image_1_output_path, image_2_output_path, result
+        # Get facial results
+        image_1_facials = verification_details.get('facial_areas_image_1')
+        image_2_facials = verification_details.get('facial_areas_image_2')
+
+        # Draw bounding boxes on images
+        image_1_output_path = draw_bounding_box_on_image(
+            image_1_path, image_1_name, [image_1_facials], 'fr'
+        )
+        image_2_output_path = draw_bounding_box_on_image(
+            image_2_path, image_2_name, [image_2_facials], 'fr'
+        )
+
+        return distance, image_1_output_path, image_2_output_path, verification_details
+
+    return 999999, str(), str(), fr_response
 
 
-# Run Object Detection model on image
-@lru_cache()
-def run_object_detection_model(image_path: str, image_name: str) -> str:
+# Run Object
+def run_object_detection_model(image_path: str, image_name: str) -> tuple[dict, str]:
     # Out filename
     output_filepath = join(PREDICTIONS_FOLDER, 'od_{}'.format(image_name))
 
@@ -150,10 +130,40 @@ def run_object_detection_model(image_path: str, image_name: str) -> str:
     od = load_yolo_od_model()
     results = od(image_path)
 
+    model_classes, detected_classes = dict(), list()
+    for _attrs in results:
+        model_classes = _attrs.names
+        model_boxes = _attrs.boxes
+        detected_classes = model_boxes.cls
+
+    detected_class_names = list(set([model_classes[int(i)] for i in detected_classes]))
+
     # Show the results
     for r in results:
         im_array = r.plot()  # plot a BGR numpy array of predictions
         im = Image.fromarray(im_array[..., ::-1])  # RGB PIL image
         im.save(output_filepath)  # save image
 
-    return output_filepath
+    return {'classes': detected_class_names}, output_filepath
+
+
+def delete_session_files_from_cloud_storage(session_id: str):
+    # Stored Images
+    store_files_status, store_files_response = get_cloud_storage_files_by_session_id(session_id, STORAGE_CONTAINER_NAME)
+
+    store_files_list = store_files_response.get('data')
+
+    if store_files_list:
+        for store_file in store_files_list:
+            delete_file_from_cloud_storage(store_file, STORAGE_CONTAINER_NAME)
+
+    # Predictions Images
+    predictions_files_status, predictions_files_response = get_cloud_storage_files_by_session_id(
+        session_id, PREDICTIONS_CONTAINER_NAME
+    )
+
+    predictions_files_list = predictions_files_response.get('data')
+
+    if predictions_files_list:
+        for predictions_file in predictions_files_list:
+            delete_file_from_cloud_storage(predictions_file, STORAGE_CONTAINER_NAME)

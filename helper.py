@@ -1,12 +1,20 @@
-import calendar
-import pickle
+from os import remove
+from os import listdir
+from os.path import isfile
+from os.path import join
+
 from datetime import date
 from datetime import datetime
-from os.path import join
+
+import calendar
+import pickle
+import fitz
+from fuzzywuzzy import fuzz
+from re import match
+
+from pandas import DataFrame
 from random import randint
 
-import fitz
-import yaml
 from PIL import Image
 from cv2 import imread
 from cv2 import imwrite
@@ -80,9 +88,6 @@ def write_dict_to_pickle(dictionary: dict, model_type: str, name: str) -> str:
     file.close()
 
     return file_path
-
-
-
 
 
 def read_pickle_file(file_path):
@@ -170,3 +175,178 @@ def convert_from_pdf_to_png(path_to_pdf: str, file_name: str):
     doc.close()
 
     return pages, output_path
+
+
+def get_row_average_mid_point(row: list) -> float:
+    y_1 = row[0][1]
+    y_4 = row[3][1]
+    mid_point_left = y_1 + ((y_4 - y_1) / 2)
+
+    y_2 = row[1][1]
+    y_3 = row[2][1]
+    mid_point_right = y_2 + ((y_3 - y_2) / 2)
+
+    return (mid_point_left + mid_point_right) / 2
+
+
+def in_box_range(y_value: float, box: list) -> bool:
+    y_1 = box[0][1]
+    y_2 = box[1][1]
+    y_3 = box[2][1]
+    y_4 = box[3][1]
+
+    y_min = min(y_1, y_2)
+    y_max = max(y_3, y_4)
+
+    if y_min <= y_value <= y_max:
+        return True
+
+    return False
+
+
+def restructured_detected_text(bounding_boxes: list, box_mid_points: list, text_detected) -> DataFrame:
+    row_items = list()
+
+    # Iterate over number of detected words
+    for row_index in range(len(bounding_boxes)):
+        same_row_items = list()
+
+        # Iterate over number of detected words setting ech word constant
+        for element_index in range(len(bounding_boxes)):
+
+            # Check if in same row
+            check = in_box_range(box_mid_points[row_index], bounding_boxes[element_index])
+
+            # When word is in the same row
+            if check:
+                same_row_items.append(element_index)
+
+        # Save row items
+        row_items.append(same_row_items)
+
+    row_items = [tuple(item) for item in row_items]  # Convert inner lists to tuples
+    row_items = list(set(row_items))
+
+    row_items = sorted(row_items, key=lambda x: len(x), reverse=True)
+
+    row_list, enlisted = list(), list()
+    for tuple_item in row_items:
+
+        add_row = True
+        for element in tuple_item:
+            if element in enlisted:
+                add_row = False
+
+        if add_row:
+            row_list.append(tuple_item)
+
+            for element in tuple_item:
+                enlisted.append(element)
+
+    row_list = sorted(row_list, key=lambda x: x[0])
+
+    text_list = list()
+    for row_tuple in row_list:
+        words = [text_detected[row_item] for row_item in row_tuple]
+        text_list.append(words)
+
+    text_list_df = DataFrame(text_list)
+
+    return text_list_df
+
+
+def get_national_id_detected_text(attribute: str, text_df: DataFrame) -> str | None:
+    result = text_df[text_df.iloc[:, 0] == attribute]
+    if not result.empty:
+        return result.iloc[0, 1]
+
+    return None
+
+
+def get_national_id_detected_features(results: dict) -> list:
+    detected_classes = results.get('classes')
+
+    expected_classes = ['court-of-arms', 'fingerprint', 'seal', 'zimbabwe-bird']
+
+    detected_features = list()
+
+    for class_name in expected_classes:
+
+        # When class is detected
+        if class_name in detected_classes:
+            detected_features.append([class_name, '✅'])
+
+        # When class is not detected
+        if class_name not in detected_classes:
+            detected_features.append([class_name, '❌'])
+
+    return detected_features
+
+
+def get_kyc_document_detected_text(search_term_list: list, detected_text_list: list, detected_bboxes_list: list):
+    por_detected_text_index_list = list()
+
+    # Iterate over Search List
+    for search_term in search_term_list:
+
+        # Iterate over detected list
+        for detected_text_index in range(len(detected_text_list)):
+
+            if search_term in detected_text_list[detected_text_index]:
+                por_detected_text_index_list.append(detected_text_index)
+
+    por_detected_bboxes_list = [detected_bboxes_list[index] for index in por_detected_text_index_list]
+
+    return por_detected_bboxes_list
+
+
+def check_text_similarity(text_1: str, text_2: str, similarity_threshold: float = 70) -> str:
+    # Compare the texts
+    similarity_score = fuzz.ratio(text_1, text_2)
+
+    # Determine if the texts are similar or not based on the similarity score
+    if similarity_score >= similarity_threshold:
+        return '✅'
+
+    return '❌'
+
+
+def convert_date_format(date_string: str, desired_format: str) -> str:
+    # Define the input and output format codes
+    input_format_codes = ['yyyy', 'mm', 'dd']
+    output_format_codes = ['%Y', '%m', '%d']
+
+    # Map the input format codes to the corresponding output format codes
+    format_mapping = dict(zip(input_format_codes, output_format_codes))
+
+    # Replace the format codes in the desired format with the corresponding output format codes
+    for code in input_format_codes:
+        desired_format = desired_format.replace(code, format_mapping[code])
+
+    # Convert the date string to the desired format
+    converted_date = datetime.strptime(date_string, '%Y-%m-%d').strftime(desired_format)
+
+    return converted_date
+
+
+def get_list_unique_elements(elements_list: list) -> list:
+    unique_elements = list()
+    for element in elements_list:
+        if element not in unique_elements:
+            unique_elements.append(element)
+    return unique_elements
+
+
+def delete_files_by_session_id(session_id: str, folder_path: str):
+    for filename in listdir(folder_path):
+        if session_id in filename:
+            file_path = join(folder_path, filename)
+            if isfile(file_path):
+                remove(file_path)
+
+
+def validate_email(email_string: str) -> bool:
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    if match(pattern, email_string):
+        return True
+    return False

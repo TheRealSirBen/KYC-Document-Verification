@@ -15,6 +15,7 @@ class ApplicationForm(Base):
     surname = Column(TEXT, nullable=False)
     gender = Column(TEXT, nullable=False)
     dob = Column(TEXT, nullable=False)
+    address = Column(TEXT, nullable=False)
     money_access = Column(TEXT, nullable=False)
     created = Column(TEXT, nullable=False)
 
@@ -26,6 +27,7 @@ class ApplicationForm(Base):
             'surname': self.surname,
             'gender': self.gender,
             'dob': self.dob,
+            'address': self.address,
             'money_access': self.money_access,
             'created': self.created
         }
@@ -86,4 +88,20 @@ class UploadedDocument(Base):
             'poin_image_path_ocr': self.poin_image_path_ocr,
             #
             'predictions': self.predictions
+        }
+
+
+class AnalysisResults(Base):
+    __tablename__ = 'analysis_results'
+    id = Column(INTEGER, primary_key=True, autoincrement=True)
+    session_id = Column(TEXT, nullable=False)
+    result_type = Column(TEXT, nullable=False)
+    result = Column(JSON, nullable=False)
+
+    def model_details(self):
+        return {
+            'id': self.id,
+            'session_id': self.session_id,
+            'result_type': self.result_type,
+            'result': self.result
         }

@@ -1,11 +1,12 @@
 # ignore ALL .log files
 *.log
 
-# ignore ALL files in ANY directory named venv, .deta, .idea
+# ignore ALL app generated folders
 venv/
 images/
 pdfs/
 predictions/
+.devcontainer/
 .idea/
 en_PP-OCRv3_rec_infer/
 

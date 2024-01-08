@@ -1,6 +1,9 @@
 import streamlit as st
+from init import initialize_database
 
-st.write("## :blue[CHINHOYI UNIVERSITY OF TECHNOLOGY]")
+initialize_database()
+
+st.header("CHINHOYI UNIVERSITY OF TECHNOLOGY")
 
 col1, col2 = st.columns(2)
 
@@ -21,3 +24,7 @@ with col2:
                 Registration in Zimbabwean Financial Institutions: Case of Old Mutual Zimbabwe
             """
     )
+
+st.write("## :blue[How to!!]")
+
+st.video('https://youtu.be/x61vZKBK830?si=KwgYQfzHWt4KMcE0')
