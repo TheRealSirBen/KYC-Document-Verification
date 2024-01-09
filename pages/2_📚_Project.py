@@ -125,7 +125,7 @@ def restart():
     delete_session_files_from_cloud_storage(session_id)
 
     st.success(
-        'All data and documents provided have been deleted and clearednfrom the system. Kindly provide feedback on '
+        'All data and documents provided have been deleted and cleared from the system. Kindly provide feedback on '
         'the 💬 Feedback page. '
         'You are also free to restart the process'
     )
