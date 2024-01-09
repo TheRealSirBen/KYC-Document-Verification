@@ -13,7 +13,7 @@ STORAGE_CONTAINER_NAME = environ.get('STORAGE_CONTAINER_NAME')
 PREDICTIONS_CONTAINER_NAME = environ.get('PREDICTIONS_CONTAINER_NAME')
 
 
-def get_cloud_storage_files_by_session_id(session_id: str, container_name: str) -> list:
+def get_cloud_storage_files_by_session_id(session_id: str, container_name: str):
     api_link = '{}/get-folder-contents/{}?filter_text={}'.format(STORAGE_URL, container_name, session_id)
 
     try:

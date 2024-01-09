@@ -24,7 +24,3 @@ with col2:
                 Registration in Zimbabwean Financial Institutions: Case of Old Mutual Zimbabwe
             """
     )
-
-st.write("## :blue[How to!!]")
-
-st.video('https://youtu.be/x61vZKBK830?si=KwgYQfzHWt4KMcE0')
