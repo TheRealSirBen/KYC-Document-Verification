@@ -24,3 +24,6 @@ with col2:
                 Registration in Zimbabwean Financial Institutions: Case of Old Mutual Zimbabwe
             """
     )
+
+st.write('### :blue[Project Description and How to navigate the App]')
+st.video('https://youtu.be/7s9RfaAPvEM')
