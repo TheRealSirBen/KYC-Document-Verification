@@ -2,15 +2,16 @@ from os import environ
 from os.path import join
 
 from PIL import Image
-from paddleocr import PaddleOCR
 from sqlalchemy.orm import sessionmaker
 from ultralytics import YOLO
 
-from helper import convert_coordinates
 from helper import draw_bounding_box_on_image
-from helper import read_ocr_results
 
+from datagrip import ping_facial_recognition_api
+from datagrip import ping_text_recognition_api
 from datagrip import facial_recognition_model
+from datagrip import text_recognition_model
+from datagrip import download_file_from_cloud_storage
 from datagrip import get_cloud_storage_files_by_session_id
 from datagrip import delete_file_from_cloud_storage
 
@@ -76,18 +77,38 @@ def delete_model_record_by_id(model: Base, _id: int):
     session.close()
 
 
+def check_models_availability() -> list:
+    message_list = list()
+    message_list.append('Object Detection Model Available')
+
+    # OCR Model
+    ping_ocr_status, ping_ocr_response = ping_text_recognition_api()
+    if ping_ocr_status == 200:
+        message_list.append('OCR Model Available')
+
+    # Facial Recognition Model
+    ping_ocr_status, ping_ocr_response = ping_facial_recognition_api()
+    if ping_ocr_status == 200:
+        message_list.append('Facial Recognition Model Available')
+
+    return message_list
+
+
 # Run Optical Character Recognition Model on image
-def run_optical_character_recognition_model(image_path: str, image_name: str):
-    # Get predictions
-    ocr = load_paddle_ocr_model()
-    result = ocr.ocr(image_path, cls=True)
+def run_optical_character_recognition_model(image_name: str):
+    model_result_status, model_result_response = text_recognition_model(image_name)
 
-    ocr_results = read_ocr_results(result)
-    bounding_boxes = convert_coordinates(ocr_results['bbox'])
+    # When model run is successful
+    if model_result_status == 200:
+        model_data: dict = model_result_response.get('data')
+        ocr_results: dict = model_data.get('ocr_results')
 
-    ocr_output_file_path = draw_bounding_box_on_image(image_path, image_name, bounding_boxes, 'ocr')
+        ocr_image_name = model_data.get('ocr_image_name')
+        download_status, download_image_path = download_file_from_cloud_storage(
+            ocr_image_name, PREDICTIONS_CONTAINER_NAME
+        )
 
-    return result, ocr_output_file_path
+        return ocr_results, download_image_path
 
 
 # Run Facial Recognition model on images

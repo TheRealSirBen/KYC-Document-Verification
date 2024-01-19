@@ -1,16 +1,16 @@
+import streamlit as st
+from streamlit import session_state
+from PIL import Image
 from init import PAGE_HELP
 from os import environ
+from pathlib import Path
+from uuid import uuid4
+from pandas import DataFrame
+from time import sleep
 
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
-from pathlib import Path
-from uuid import uuid4
-
-import streamlit as st
-from PIL import Image
-from pandas import DataFrame
-from streamlit import session_state
 
 from database import ApplicationForm
 from database import UploadedDocument
@@ -41,6 +41,7 @@ from helper import get_kyc_document_detected_text
 from helper import get_list_unique_elements
 from helper import delete_files_by_session_id
 
+from middleware import check_models_availability
 from middleware import delete_model_record_by_id
 from middleware import get_model_details_by_filter
 from middleware import new_record
@@ -60,6 +61,13 @@ poin_document_text_detection_analysis_df = DataFrame()
 # # Generate session id
 if 'session_id' not in session_state:
     session_state['session_id'] = str(uuid4())
+    available_models = check_models_availability()
+
+    for model_message in available_models:
+        message_placeholder = st.empty()
+        message_placeholder.info(model_message)
+        sleep(0.5)
+        message_placeholder.empty()
 
 # # Generate navigation id
 if 'navigation_id' not in session_state:
@@ -173,7 +181,7 @@ def poi_document_button_clicked(_poi_document_path: str, _poi_document_name: str
 
     # Run OCR Model
     _poi_document_ocr_dict, output_filepath_ocr = run_optical_character_recognition_model(
-        _poi_document_path, _poi_document_name
+        _poi_document_name
     )
 
     _poi_od_result_file_path = write_dict_to_pickle(_poi_document_od_dict, 'od', _poi_document_name)
@@ -306,7 +314,7 @@ def back_to_face_identity():
 def submit_image_for_text_analysis(_por_document_path: str, _por_document_type: str, _por_document_name: str):
     # Run OCR model
     _por_document_ocr_dict, output_filepath_ocr = run_optical_character_recognition_model(
-        _por_document_path, _por_document_name
+        _por_document_name
     )
 
     # Save results
@@ -358,10 +366,10 @@ def submit_pdf_images_for_text_analysis(
 ):
     # Run OCR model
     _document_ocr_1_dict, output_filepath_1_ocr = run_optical_character_recognition_model(
-        _document_1_path, _document_1_name
+        _document_1_name
     )
     _document_ocr_2_dict, output_filepath_2_ocr = run_optical_character_recognition_model(
-        _document_2_path, _document_2_name
+        _document_2_name
     )
 
     # Save results
@@ -606,7 +614,8 @@ if session_state.get('navigation_id') == 1.5:
     poi_document_ocr_pickle = por_document_details.get('predictions')
     poi_document_ocr_dict = read_pickle_file(poi_document_ocr_pickle.get('ocr'))
     poi_document_od_dict = read_pickle_file(poi_document_ocr_pickle.get('od'))
-    poi_document_ocr_results = read_ocr_results(poi_document_ocr_dict)
+    # poi_document_ocr_results = read_ocr_results(poi_document_ocr_dict)
+    poi_document_ocr_results = poi_document_ocr_dict
     poi_document_text_detected = poi_document_ocr_results.get('text')
     bboxes = poi_document_ocr_results.get('bbox')
 
@@ -860,8 +869,8 @@ if session_state.get('navigation_id') == 2.5:
     with col2:
         st.image(por_document_details.get('poi_image_path_fr'))
 
-    if poi_recent_picture_distance < 0.4:
-        st.info('The faces have a {} difference, which is below the acceptable threshold'.format(
+    if poi_recent_picture_distance < 0.2:
+        st.info('The faces have a small difference of {}, which is in the acceptable threshold.'.format(
             round(poi_recent_picture_distance, 2))
         )
         st.button('Proceed to Proof of residency', use_container_width=True, on_click=proceed_to_por)
@@ -897,7 +906,6 @@ if session_state.get('navigation_id') == 3:
     if por_doc_uploaded_file is not None:
 
         por_doc_uploaded_image = None
-
         pdf_check = por_doc_uploaded_file.name.endswith('pdf')
         image_check = por_doc_uploaded_file.name.endswith(tuple(IMAGE_TYPES))
 
@@ -936,6 +944,10 @@ if session_state.get('navigation_id') == 3:
 
                 new_record(UploadedDocument, por_document_1_details)
                 new_record(UploadedDocument, por_document_2_details)
+
+                # Upload to cloud storage
+                upload_file_to_cloud_storage(top_image_name, top_image_path)
+                upload_file_to_cloud_storage(bottom_image_name, bottom_image_path)
 
                 # Clear variables
                 por_doc_uploaded_file = None
@@ -999,7 +1011,8 @@ if session_state.get('navigation_id') == 3.5:
     por_document_ocr_predicted_path = por_document_details.get('por_image_path_ocr')
     por_document_ocr_pickle = por_document_details.get('predictions')
     por_document_ocr_dict = read_pickle_file(por_document_ocr_pickle.get('ocr'))
-    por_document_ocr_results = read_ocr_results(por_document_ocr_dict)
+    # por_document_ocr_results = read_ocr_results(por_document_ocr_dict)
+    por_document_ocr_results = por_document_ocr_dict
     poi_document_ocr_df = DataFrame(
         {'text': por_document_ocr_results['text'], 'score': por_document_ocr_results['score']}
     )
@@ -1049,7 +1062,8 @@ if session_state.get('navigation_id') == 3.6:
 
         if por_document_ocr_pickle is not None:
             por_document_ocr_dict = read_pickle_file(por_document_ocr_pickle.get('ocr'))
-            por_document_ocr_results = read_ocr_results(por_document_ocr_dict)
+            # por_document_ocr_results = read_ocr_results(por_document_ocr_dict)
+            por_document_ocr_results = por_document_ocr_dict
             poi_document_ocr_df = DataFrame(
                 {'text': por_document_ocr_results['text'], 'score': por_document_ocr_results['score']}
             )
@@ -1206,6 +1220,10 @@ if session_state.get('navigation_id') == 4:
 
                 new_record(UploadedDocument, poin_document_1_details)
                 new_record(UploadedDocument, poin_document_2_details)
+
+                # Upload to cloud
+                upload_file_to_cloud_storage(top_image_name, top_image_path)
+                upload_file_to_cloud_storage(bottom_image_name, bottom_image_path)
 
                 poin_doc_uploaded_file = None
 

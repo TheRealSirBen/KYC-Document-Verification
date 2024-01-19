@@ -7,6 +7,7 @@ from json import loads
 from json import dumps
 
 FACIAL_RECOGNITION_MODEL_URL = environ.get('FACIAL_RECOGNITION_MODEL_URL')
+TEXT_RECOGNITION_MODEL_URL = environ.get('TEXT_RECOGNITION_MODEL_URL')
 STORAGE_URL = environ.get('STORAGE_URL')
 EMAIL_COMM_URL = environ.get('EMAIL_COMM_URL')
 STORAGE_CONTAINER_NAME = environ.get('STORAGE_CONTAINER_NAME')
@@ -25,6 +26,33 @@ def get_cloud_storage_files_by_session_id(session_id: str, container_name: str):
 
     except ReqConnError:
         return 404, str()
+
+
+def download_file_from_cloud_storage(image_name: str, container_name: str):
+    api_link = '{}/download-blob/{}/{}'.format(STORAGE_URL, container_name, image_name)
+
+    try:
+        data = get(api_link)
+
+        status = data.status_code
+
+        if status == 404:
+            return status, 'Image does not exist'
+
+        if status == 200:
+            image_data = data.content
+
+            # Save the image to a file
+            image_path = 'predictions/{}'.format(image_name)
+            with open(image_path, 'wb') as f:
+                f.write(image_data)
+
+            f.close()
+
+            return status, image_path
+
+    except ReqConnError:
+        return 400, 'Server unavailable'
 
 
 def upload_file_to_cloud_storage(file_name: str, file_path: str):
@@ -58,6 +86,18 @@ def delete_file_from_cloud_storage(file_name: str, container_name: str = STORAGE
         return 404, str()
 
 
+def ping_facial_recognition_api():
+    try:
+        # Make the POST request
+        data = get(FACIAL_RECOGNITION_MODEL_URL)
+
+        status, response = data.status_code, loads(data.text)
+        return status, response
+
+    except ReqConnError:
+        return 404, dict()
+
+
 def facial_extraction_model(image_name: str):
     api_link = '{}/face-extraction/{}?storage_container_name={}'.format(
         FACIAL_RECOGNITION_MODEL_URL,
@@ -81,6 +121,37 @@ def facial_recognition_model(image_1_name: str, image_2_name: str):
         FACIAL_RECOGNITION_MODEL_URL,
         image_1_name,
         image_2_name,
+        STORAGE_CONTAINER_NAME,
+        PREDICTIONS_CONTAINER_NAME
+    )
+
+    try:
+        # Make the POST request
+        data = post(api_link)
+
+        status, response = data.status_code, loads(data.text)
+        return status, response
+
+    except ReqConnError:
+        return 404, dict()
+
+
+def ping_text_recognition_api():
+    try:
+        # Make the POST request
+        data = get(TEXT_RECOGNITION_MODEL_URL)
+
+        status, response = data.status_code, loads(data.text)
+        return status, response
+
+    except ReqConnError:
+        return 404, dict()
+
+
+def text_recognition_model(image_name: str):
+    api_link = '{}/text-extraction/{}?storage_container_name={}&predictions_container_name={}'.format(
+        TEXT_RECOGNITION_MODEL_URL,
+        image_name,
         STORAGE_CONTAINER_NAME,
         PREDICTIONS_CONTAINER_NAME
     )

@@ -5,6 +5,7 @@ initialize_database()
 
 st.header("CHINHOYI UNIVERSITY OF TECHNOLOGY")
 
+
 col1, col2 = st.columns(2)
 
 with col1:
