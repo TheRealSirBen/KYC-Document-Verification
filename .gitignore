@@ -13,5 +13,6 @@ en_PP-OCRv3_rec_infer/
 # ignore ALL files in ANY directory named __pycache__
 **/__pycache__/
 
-.env
-app_database.db
+*.db
+*.env
+*.txt

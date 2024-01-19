@@ -10,4 +10,5 @@ en_PP-OCRv3_rec_infer/
 __pycache__/
 
 *.log
-trial-1_key.pem
+*.env
+*.txt
